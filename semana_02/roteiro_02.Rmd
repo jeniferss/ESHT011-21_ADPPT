@@ -1,0 +1,255 @@
+---
+title: "Análise Exploratória I"
+author: "Jenifer Soares Souza"
+output: html_document
+---
+
+## Roteiro 02 - Análise Exploratória I
+
+Em uma Análise Exploratória são utilizados métodos para resumir, visualizar e interpretar as características principais dos dados antes de realizar modelagens ou análises complexas.
+
+### Importando a base de dados
+
+Nesta seção, apresentamos o processo de importação da base de dados relacionada aos indicadores municipais brasileiros para análise utilizando R. Os dados estão formatados em csv, onde os valores são separados por ponto e vírgula, e os decimais são representados por vírgula. Durante este processo, utilizamos a função `View()` para visualizar de forma iterativa a tabela importada para verificar a estrutura dos dados.
+
+```{r}
+
+file_path <- "water_data.csv" 
+water_data <- read.csv2(file_path, encoding = "UTF-8")
+
+View(water_data)
+```
+
+### Explorando os dados
+
+Na sessão anterior, criamos um DataFrame, uma estrutura de dados que organiza informações em linhas e colunas, similar a uma planilha no Excel ou, de forma mais simples, a uma tabela. Cada coluna em um DataFrame possui um cabeçalho que indica qual informação ela representa, fornecendo uma visão dos dados. Para o nosso conjunto de dados, temos:
+
+```{r}
+
+headers <- paste(names(water_data), collapse = "\n")
+cat(headers)
+```
+
+Uma prática comum é utilizar cabeçalhos com nomes descritivos, geralmente curtos, para melhorar a compreensão e o manuseio. Desta forma, esses nomes muitas vezes têm informações adicionais que os descrevem. A tabela a seguir mostra os detalhes associados aos cabeçalhos do nosso DataFrame.
+
+| Código    | Descrição                                                                                                              |
+|-------------|-----------------------------------------------------------|
+| ID_IBGE   | Código IBGE (7 dígitos)                                                                                                |
+| ID_SNIS   | Código IBGE (6 dígitos)                                                                                                |
+| NOME_MUN  | Nome do Município                                                                                                      |
+| UF        | Unidade da Federação                                                                                                   |
+| REGIAO    | Região do País                                                                                                         |
+| PIB       | PIB 2010                                                                                                               |
+| RENDAPITA | Renda per Capita 2010                                                                                                  |
+| GINI      | Índice GINI 2010                                                                                                       |
+| IDH       | Índice de Desenvolvimento Humano 2010                                                                                  |
+| IDH_CLASS | Classificação do Índice de Desenvolvimento Humano 2010: Muito Alto \>= 0,9; Alto \>= 0,8; Médio \>= 0,5; Baixo \< 0,5. |
+| GE012     | População Total Residente no Município                                                                                 |
+| AG001     | População Total Atendida com Abastecimento de Água                                                                     |
+| AG020     | Volume Micromedido nas Economias Residenciais Ativas de Agua - 1.000 m3/ano                                            |
+| AG022     | Quantidade de Economias Residenciais Ativas Micromedidas                                                               |
+
+Existem outras formas de visualização de dados, especialmente para fazer verificações rápidas em grandes conjuntos. Uma dessas formas é utilizar a função `head()`, que exibe as primeiras n linhas do nosso DataFrame como saída.
+
+```{r}
+
+head(water_data, n = 5)
+```
+
+Da mesma maneira, podemos exibir as últimas n linhas do nosso DataFrame com a função `tail()`.
+
+```{r}
+
+tail(water_data, n = 5)
+```
+
+A função `str()` exibe a estrutura da base de dados, com a classe da base de dados, o número de observações e variáveis, o nome de cada variável, a classe de cada variável (se é numérica, lógica, caractére ou outra) e as primeiras observações.
+
+```{r}
+
+str(water_data)
+```
+
+A função `summary()` apresenta um sumário de estatísticas descritivas (mínimo, 1º quartil, mediana, média, 3º quartil, máximo e valores faltantes - NA’s) para todas as variáveis numéricas.
+
+```{r}
+
+summary(water_data)
+```
+
+### Criando subconjuntos
+
+No decorrer de uma análise de dados, você pode precisar selecionar variáveis e filtrar observações, ou seja criar um subconjunto. Na linguagem R, subconjuntos podem ser criados com o uso de colchetes, seguindo o formato: `base_da_dados[observações,variáveis]`.
+
+Por exemplo, é possível selecionar as seis primeiras observações, de forma similar à função `head()`, com o comando:
+
+```{r}
+
+water_data[1:6,]
+```
+
+Para visualizar apenas o IDH desses seis municípios, podemos adicionar um segundo argumento com o número ou nome da variável:
+
+```{r}
+
+water_data[1:6, 9]
+```
+
+```{r}
+
+water_data[1:6, "IDH"]
+```
+
+Outra forma de acessar uma coluna pelo seu nome é usando o operador `$` (cifrão) após os colchetes.
+
+```{r}
+
+water_data[1:6,]$IDH
+```
+
+Para ver o nome do município e IDH, podemos adicionar um vetor no segundo argumento com as variáveis de interesse:
+
+```{r}
+
+water_data[1:6, c("NOME_MUN", "IDH")]
+```
+
+Subconjuntos também funcionam com operadores lógicos, sendo possível filtrar as observações que satisfazem uma determinada condição usando a função `which()`. No exemplo abaixo, visualizamos o nome e IDH dos municípios que satisfazem as condições: Unidade da Federação é igual a São Paulo E IDH maior que 0,85.
+
+```{r}
+
+water_data[
+  which(water_data$UF == "SP" & water_data$IDH > 0.85), 
+  c("NOME_MUN", "IDH")
+]
+```
+
+### Criando tabelas de contingência
+
+Se você estiver trabalhando com variáveis categóricas, pode ser necessário criar tabelas de contingência para apresentar a contagem de ocorrências daquela variável. Para exibir a distribuição de municípios de acordo com a classificação do IDH, usaremos a função `table()`.
+
+```{r}
+
+table(water_data$IDH_CLASS)
+```
+
+A função `table()` também pode ser usada com dois argumentos, conforme mostra o exemplo abaixo com a classificação do IDH por região.
+
+```{r}
+
+table(water_data$REGIAO, water_data$IDH_CLASS)
+```
+
+### Definindo uma nova variável
+
+É possível criar uma nova variável usando o operador `<-` ou `=`. Neste exemplo, vamos criar duas novas variáveis, chamadas `CONSUMO1` e `CONSUMO2`:
+
+-   `CONSUMO1`: Consumo de Água per capita - População Total - m3/ano (AG020/GE012)
+
+-   `CONSUMO2`: Consumo de Água per capita - População Atendida - m3/ano (AG020/AG001)
+
+Como a unidade do consumo de água (AG020) é **1.000 m³/ano**, primeiro é preciso multiplicar AG020 por 1.000 para obter a unidade **m³/ano** e depois dividir pela população para obter o consumo de água per capita em m3/ano.
+
+Exibindo as primeiras observações, podemos ver que as duas novas variáveis foram definidas com sucesso.
+
+```{r}
+
+water_data$CONSUMO1 <- water_data$AG020 * 1000 / water_data$GE012
+water_data$CONSUMO2 <- water_data$AG020 * 1000 / water_data$AG001
+
+head(water_data)
+```
+
+### Calculando estatísticas básicas (média, mediana, variância, desvio padrão)
+
+Em todas as funções usaremos o argumento opcional `na.rm = TRUE` para remover os valores faltantes (NA). Se a variável não possuir valores faltantes, esse argumento não é necessário.
+
+A média é uma medida estatística de tendência central que representa o centro de massa de uma distribuição contínua. É calculada somando todos os valores e dividindo o resultado pelo número total de observações.
+
+```{r}
+
+mean(water_data$CONSUMO1, na.rm = TRUE)
+```
+
+A mediana é uma medida estatística de tendência central que representa o valor central de um conjunto de dados ordenados numericamente. Para encontrar a mediana, os dados são organizados em ordem crescente ou decrescente, e a mediana é o valor que está exatamente no meio da distribuição, ou a média dos dois valores centrais.
+
+```{r}
+
+median(water_data$CONSUMO1, na.rm = TRUE)
+```
+
+A variância é uma medida estatística de espalhamento que indica a dispersão dos dados em relação à média. Ela calcula a média dos quadrados das diferenças entre cada observação e a média.
+
+```{r}
+
+var(water_data$CONSUMO1, na.rm = TRUE)
+```
+
+O desvio padrão é uma medida estatística de espalhamento que quantifica a dispersão dos valores em um conjunto de dados em relação à média. Ele é a raiz quadrada da variância.
+
+```{r}
+
+sd(water_data$CONSUMO1, na.rm = TRUE)
+```
+
+*\* Um desvio padrão de* $\approx$ *16 para uma média de* $\approx$ *24 indica uma dispersão relativamente alta dos dados em relação à média.* *Esse comportamento poderia ser explicado pela não simetria de distribuição dos dados e a presença de valores extremos.*
+
+### Desenhando gráficos
+
+#### Box-plot
+
+Um gráfico Boxplot, ou diagrama de caixa, é uma ferramenta visual utilizada para representar a distribuição de um conjunto de dados através de quartis, além de sua mediana e limites superior e inferior.
+
+```{r}
+
+boxplot(
+  water_data$CONSUMO1,
+  main = "Consumo de água população total (AG020/GE012)",
+  xlab = "Consumo de água per capita (m3/ano)", 
+  ylab = "Frequência"
+)
+```
+
+O box-plot de `CONSUMO1` indica que existem diversos valores atípicos (*outliers*), ou seja, fora dos limites.
+
+#### Histograma
+
+Um histograma é um tipo de gráfico utilizado para representar a distribuição de frequência da ocorrência de uma observação em um conjunto de dados.
+
+```{r}
+
+hist(
+  water_data$CONSUMO1,
+  main = "Consumo de água população total (AG020/GE012)",
+  xlab = "Consumo de água per capita (m3/ano)", 
+  ylab = "Frequência"
+)
+```
+
+O histograma de `CONSUMO1` sugere uma distribuição positivamente assimétrica dessa variável. A barra maior indica a `moda`, que neste caso está entre 10-20 m3/ano, sendo menor do que a `média` (24,77 m3/ano) e `mediana` (22,35 m3/ano). Como a média, mediana e moda não coincidem, a distribuição de `CONSUMO1` não representa uma curva normal.
+
+#### Qqplot
+
+qqplot é um gráfico usado para avaliar se um conjunto de dados segue ou não um tipo de distribuição, como por exemplo, a distribuição normal.
+
+```{r}
+
+qqnorm(water_data$CONSUMO1)
+qqline(water_data$CONSUMO1, col = "red")
+```
+
+O qqplot de `CONSUMO1` sugere uma certa linearidade pela proximidade com a curva normal (em vermelho) nos quantis centrais, desviando da curva em valores muito altos e muito baixos (*outliers*).
+
+### Exportando a base de dados
+
+Após executar a rotina, você fez alterações na base de dados (novas variáveis - CONSUMO1 e CONSUMO2), por isso é importante salvá-la para acesso futuro. O R não vai exportar a sua base de dados a menos que você especifique esse comando.
+
+É possível exportar a base de dados no formato `csv2` com a função `write.csv2()`. Ela exige dois argumentos: primeiro o nome do objeto que deseja exportar e depois o diretório, nome do arquivo e formato entre aspas. Para não perder a base de dados original, recomendamos salvar essa base de dados com um novo nome - `agua2`.
+
+```{r}
+
+output_file_path <- "water_data_v2.csv"
+write.csv2(water_data, output_file_path, row.names = FALSE)
+```
+
+\*\* Essa aula foi baseada em: <https://github.com/luisfelipebr/mti2020/blob/master/roteiros/roteiro2.Rmd>. E os arquivos gerados podem ser visualizados em: <https://github.com/jeniferss/ESHT011-21_ADPPT/tree/main/semana_02>
