@@ -1,0 +1,325 @@
+---
+title: "Análise Exploratória I"
+author: "Jenifer Soares Souza"
+output: html_document
+---
+
+## Roteiro 02 - Análise Exploratória I
+
+Na Análise Exploratória de Dados (EDA), são utilizados métodos para resumir, visualizar e interpretar as principais características dos dados antes de realizar modelagens ou análises complexas.
+
+Considerando o tema escolhido pelo grupo para a disciplina, que envolve dados sobre saneamento, renda e enchentes, parte das informações relacionadas foram extraídas da plataforma Painel Saneamento Brasil para o ano de 2018.
+
+A plataforma Painel Saneamento Brasil é uma iniciativa que visa disponibilizar informações sobre o saneamento básico no Brasil, fornecendo acesso a estatísticas sobre abastecimento de água, esgotamento sanitário, manejo de resíduos sólidos e drenagem urbana, permitindo uma análise das condições de saneamento no país.
+
+### Importando a base de dados
+
+Nesta seção, apresentamos o processo de importação da base de dados relacionada aos indicadores brasileiros para análise utilizando a linguagem R.
+
+Primeiramente, foi feito o download de uma planilha em formato Excel a partir do [Painel Saneamento Brasil](https://www.painelsaneamento.org.br/explore/ano?SE%5Ba%5D=2018&SE%5Bi%5D%5BPOP_SEM_AG%25%5D=POP_SEM_AG%25&SE%5Bi%5D%5BPOP_SEM_ES%25%5D=POP_SEM_ES%25&SE%5Bi%5D%5BVOL_ES_AG%5D=VOL_ES_AG&SE%5Bi%5D%5BVOL_ES_NTRATA%5D=VOL_ES_NTRATA&SE%5Bi%5D%5BINT_VH%5D=INT_VH&SE%5Bi%5D%5BOBITO_VH%5D=OBITO_VH&SE%5Bi%5D%5BRENDA_G1%5D=RENDA_G1&SE%5Bi%5D%5BRENDA_G2%5D=RENDA_G2&media=). Para que os dados pudessem ser lidos no R, foi necessária a instalação do pacote \`readxl\`.
+
+Após a importação dos dados, utilizamos a função \`View()\` para visualizar de forma interativa a tabela importada e verificar a estrutura dos dados.
+
+```{r}
+
+# Importação de biblioteca para leitura de arquivos .xlsx
+if (!requireNamespace("readxl", quietly = TRUE)) {
+  install.packages("readxl")
+}
+library(readxl)
+
+# Lendo dados do arquivo que foi feito download
+file_path <- "dados_saneamento.xlsx" 
+data <- read_excel(path = file_path, skip = 2)
+
+View(data)
+```
+
+### Explorando os dados
+
+Na sessão anterior, criamos um DataFrame, uma estrutura de dados que organiza informações em linhas e colunas, similar a uma planilha no Excel ou, de forma mais simples, a uma tabela. Cada coluna em um DataFrame possui um cabeçalho que indica qual informação ela representa, fornecendo uma visão dos dados. Para o nosso conjunto de dados, temos:
+
+```{r}
+
+headers <- paste(names(data), collapse = "\n\n")
+cat(headers)
+```
+
+Existem outras formas de visualização de dados, especialmente para fazer verificações rápidas em grandes conjuntos. Uma dessas formas é utilizar a função `head()`, que exibe as primeiras n linhas do nosso DataFrame como saída.
+
+```{r}
+
+head(data, n = 10)
+```
+
+Da mesma maneira, podemos exibir as últimas n linhas do nosso DataFrame com a função `tail()`.
+
+```{r}
+
+tail(data, n = 5)
+```
+
+Como se pode perceber, os dados apresentam estatísticas que abrangem diferentes níveis geográficos: País (Brasil), regiões (Sul, Sudeste, Centro-Oeste, Norte, Nordeste), estados e municípios. Para esta análise, serão utilizados os dados por município.
+
+Para isso, foram filtradas as linhas que contêm a palavra 'Município' em seu nome. Além disso, observou-se que a coluna 'Localidade' segue um padrão: Nome da Localidade (Tipo de Localidade) (Código). Para uma melhor representação, ela será dividida em 3 colunas. Nesse processo, foram utilizadas as funções/ferramentas:
+
+-   `data.frame()` : usada para criar um novo objeto de dados do tipo.
+-   `gsub()`: É uma função em R para substituir padrões de texto em uma string, geralmente esse padões são definidos em [REGEX](https://regexr.com/).
+-   `cbind()`: usada para combinar vetores ou dataframes por coluna.
+-   `-which(names(data) %in% c("Localidade"))`: o sinal - indica negação, ou seja, estão sendo buscadas as colunas do DataFrame que não a de Localidade.
+
+```{r}
+
+split_locality <- function(data) {
+  data_split <- data.frame(
+    Nome = gsub(" \\(.*", "", data$Localidade),
+    Tipo = gsub(".*\\((.*?)\\).*", "\\1", data$Localidade),
+    Código = gsub(".*\\(|\\)", "", data$Localidade),
+    check.names = FALSE
+  )
+  
+  data_split <- cbind(
+    data_split, 
+    data[, -which(names(data) %in% c("Localidade"))]
+  )
+  
+  return(data_split)
+}
+
+
+data <- split_locality(data)
+View(data)
+
+municipalities_data <- data[grep("Município", data$Tipo), ]
+head(municipalities_data)
+```
+
+A função `str()` exibe a estrutura da base de dados, com a classe da base de dados, o número de observações e variáveis, o nome de cada variável, a classe de cada variável (se é numérica, lógica, caractére ou outra) e as primeiras observações.
+
+```{r}
+
+str(municipalities_data)
+```
+
+A função `summary()` apresenta um sumário de estatísticas descritivas (mínimo, 1º quartil, mediana, média, 3º quartil, máximo e valores faltantes - NA’s) para todas as variáveis numéricas.
+
+```{r}
+
+summary(municipalities_data)
+```
+
+### Criando subconjuntos
+
+No decorrer de uma análise de dados, você pode precisar selecionar variáveis e filtrar observações, ou seja criar um subconjunto. Na linguagem R, subconjuntos podem ser criados com o uso de colchetes, seguindo o formato: `base_da_dados[observações,variáveis]`.
+
+Por exemplo, é possível selecionar as seis primeiras observações, de forma similar à função `head()`, com o comando:
+
+```{r}
+
+municipalities_data[1:6,]
+```
+
+Para visualizar apenas o nome dos municípios, podemos adicionar um segundo argumento com o número ou nome da variável:
+
+```{r}
+
+municipalities_data[1:6, 1]
+```
+
+```{r}
+
+municipalities_data[1:6, "Nome"]
+```
+
+Outra forma de acessar uma coluna pelo seu nome é usando o operador `$` (cifrão) após os colchetes.
+
+```{r}
+
+municipalities_data[1:6,]$Nome
+```
+
+Para ver o nome do município e código, podemos adicionar um vetor no segundo argumento com as variáveis de interesse:
+
+```{r}
+
+municipalities_data[1:6, c("Nome", "Código")]
+```
+
+Subconjuntos também funcionam com operadores lógicos, sendo possível filtrar as observações que satisfazem uma determinada condição usando a função `which()`. No exemplo abaixo, visualizamos o nome e IDH dos municípios que satisfazem as condições: Inciiam nome com a letra J e mais que 100 ocorrências de Internações por doenças associadas à falta de saneamento.
+
+```{r}
+
+municipalities_data[
+  which(
+    grepl("^M", municipalities_data$Nome) &
+    municipalities_data[, 8] > 100
+  ),
+  c("Nome", "Internações por doenças associadas à falta de saneamento
+(Número de internações) (DATASUS)")
+]
+
+```
+
+### Definindo uma nova variável
+
+É possível criar uma nova variável usando o operador `<-` ou `=`. Para ilustrar, foi criada uma nova coluna booleana `teve_internacoes_saneamento` que indica se houve ou não internações por doenças associadas à falta de saneamento.
+
+Utilizou-se a função `ifelse()` para avaliar se o número de internações por doenças associadas à falta de saneamento é maior que zero. Se positivo, `TRUE` é atribuído à nova coluna `teve_internacoes_saneamento`, caso contrário `FALSE` é atribuído.
+
+Exibindo as primeiras observações, podemos ver que as duas novas variáveis foram definidas com sucesso.
+
+```{r}
+
+municipalities_data$"Teve Internações" <- ifelse(
+  municipalities_data$"Internações por doenças associadas à falta de saneamento
+(Número de internações) (DATASUS)" > 0,
+  "Sim",
+  "Não"
+)
+
+head(municipalities_data)
+```
+
+### Calculando estatísticas básicas (média, mediana, variância, desvio padrão)
+
+Em todas as funções usaremos o argumento opcional `na.rm = TRUE` para remover os valores faltantes (NA). Se a variável não possuir valores faltantes, esse argumento não é necessário.
+
+A média é uma medida estatística de tendência central que representa o centro de massa de uma distribuição contínua. É calculada somando todos os valores e dividindo o resultado pelo número total de observações.
+
+```{r}
+
+indexes <- 8:11
+
+means <- colMeans(municipalities_data[, indexes], na.rm = TRUE)
+means_df <- data.frame(
+  "Média" = means
+)
+
+means_df
+```
+
+A mediana é uma medida estatística de tendência central que representa o valor central de um conjunto de dados ordenados numericamente. Para encontrar a mediana, os dados são organizados em ordem crescente ou decrescente, e a mediana é o valor que está exatamente no meio da distribuição, ou a média dos dois valores centrais.
+
+```{r}
+
+medians <- apply(municipalities_data[, indexes], 2, median, na.rm = TRUE)
+medians_df <- data.frame(
+  "Mediana" = medians
+)
+
+medians_df
+```
+
+A variância é uma medida estatística de espalhamento que indica a dispersão dos dados em relação à média. Ela calcula a média dos quadrados das diferenças entre cada observação e a média.
+
+```{r}
+
+vars <- apply(municipalities_data[, indexes], 2, var, na.rm = TRUE)
+vars_df <- data.frame(
+  "Variância" = vars
+)
+
+vars_df
+```
+
+O desvio padrão é uma medida estatística de espalhamento que quantifica a dispersão dos valores em um conjunto de dados em relação à média. Ele é a raiz quadrada da variância.
+
+```{r}
+
+sds <- apply(municipalities_data[, indexes], 2, sd, na.rm = TRUE)
+sds_df <- data.frame(
+  "Desvio Padrão" = sds
+)
+
+sds_df
+```
+
+### Desenhando gráficos
+
+#### Box-plot
+
+Um gráfico Boxplot, ou diagrama de caixa, é uma ferramenta visual utilizada para representar a distribuição de um conjunto de dados através de quartis, além de sua mediana e limites superior e inferior.
+
+```{r}
+
+for (index in indexes) {
+  col <- names(municipalities_data)[index]
+  main_title <- paste("Histograma de", col)
+  
+  boxplot(
+    municipalities_data[[index]],
+    main = main_title,
+    xlab = paste("Valores de", col), 
+    ylab = "Frequência",
+    col = "lightblue",
+    cex.main = 0.7,
+    cex.lab = 0.7,
+    cex.axis = 0.8
+  )
+}
+```
+
+O box-plot das colunas selecionadas indica que existem diversos valores atípicos (*outliers*), ou seja, fora dos limites.
+
+#### Histograma
+
+Um histograma é um tipo de gráfico utilizado para representar a distribuição de frequência da ocorrência de uma observação em um conjunto de dados.
+
+```{r}
+
+for (index in indexes) {
+  col <- names(municipalities_data)[index]
+  main_title <- paste("Histograma de", col)
+  
+  hist(
+    municipalities_data[[index]],  
+    main = main_title,
+    xlab = paste("Valores de", col), 
+    ylab = "Frequência",
+    col = "lightblue",
+    cex.main = 0.7,
+    cex.lab = 0.7,
+    cex.axis = 0.8
+  )
+}
+
+```
+
+Ao analisar os histogramas, observa-se uma assimetria e a divergência entre média, mediana e moda, indicando que as distribuições das colunas selecionadas não seguem uma distribuição normal.
+
+#### Qqplot
+
+qqplot é um gráfico usado para avaliar se um conjunto de dados segue ou não um tipo de distribuição, como por exemplo, a distribuição normal.
+
+```{r}
+
+for (index in indexes) {
+  col <- names(municipalities_data)[index]
+  main_title <- paste("Histograma de", col)
+  
+  qqnorm(municipalities_data[[index]], main = main_title, cex.main = 0.7,)
+  qqline(municipalities_data[[index]], col = "red")
+}
+
+```
+
+O qqplot das colunas selecionadas sugere uma certa linearidade pela proximidade com a curva normal (em vermelho) nos quantis centrais, desviando da curva em valores muito altos e muito baixos (*outliers*).
+
+### Exportando a base de dados
+
+Após executar a rotina, é recomendado que o usuário salve as alterações feitas na base de dados para acesso futuro. Para exportar os dados, o procedimento envolve utilizar a biblioteca \`openxlsx\`.
+
+É possível exportar o dataframe para um arquivo Excel (.xlsx) usando a função `write.xlsx(dataframe, file = "nome_do_arquivo.xlsx")`.
+
+```{r}
+
+if (!requireNamespace("openxlsx", quietly = TRUE)) {
+  install.packages("openxlsx")
+}
+library(openxlsx)
+
+output_file_path <- "dados_saneamento_v2.xlsx"
+write.xlsx(municipalities_data, file = output_file_path)
+```
+
+\*\* Essa aula foi baseada em: <https://github.com/luisfelipebr/mti2020/blob/master/roteiros/roteiro2.Rmd>. E os arquivos gerados podem ser visualizados em: <https://github.com/jeniferss/ESHT011-21_ADPPT/tree/main/semana_02>
