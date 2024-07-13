@@ -6,7 +6,7 @@ output: html_document
 
 ## Roteiro 02 - Análise Exploratória I
 
-Na Análise Exploratória de Dados (EDA), são utilizados métodos para resumir, visualizar e interpretar as principais características dos dados antes de realizar modelagens ou análises complexas.
+Na Análise Exploratória de Dados, são utilizados métodos para resumir, visualizar e interpretar as principais características dos dados antes de realizar modelagens ou análises complexas.
 
 Considerando o tema escolhido pelo grupo para a disciplina, que envolve dados sobre saneamento, renda e enchentes, parte das informações relacionadas foram extraídas da plataforma Painel Saneamento Brasil para o ano de 2018.
 
@@ -16,9 +16,9 @@ A plataforma Painel Saneamento Brasil é uma iniciativa que visa disponibilizar 
 
 Nesta seção, apresentamos o processo de importação da base de dados relacionada aos indicadores brasileiros para análise utilizando a linguagem R.
 
-Primeiramente, foi feito o download de uma planilha em formato Excel a partir do [Painel Saneamento Brasil](https://www.painelsaneamento.org.br/explore/ano?SE%5Ba%5D=2018&SE%5Bi%5D%5BPOP_SEM_AG%25%5D=POP_SEM_AG%25&SE%5Bi%5D%5BPOP_SEM_ES%25%5D=POP_SEM_ES%25&SE%5Bi%5D%5BVOL_ES_AG%5D=VOL_ES_AG&SE%5Bi%5D%5BVOL_ES_NTRATA%5D=VOL_ES_NTRATA&SE%5Bi%5D%5BINT_VH%5D=INT_VH&SE%5Bi%5D%5BOBITO_VH%5D=OBITO_VH&SE%5Bi%5D%5BRENDA_G1%5D=RENDA_G1&SE%5Bi%5D%5BRENDA_G2%5D=RENDA_G2&media=). Para que os dados pudessem ser lidos no R, foi necessária a instalação do pacote \`readxl\`.
+Primeiramente, foi feito o download de uma planilha em formato Excel a partir do [Painel Saneamento Brasil](https://www.painelsaneamento.org.br/explore/ano?SE%5Ba%5D=2018&SE%5Bi%5D%5BPOP_SEM_AG%25%5D=POP_SEM_AG%25&SE%5Bi%5D%5BPOP_SEM_ES%25%5D=POP_SEM_ES%25&SE%5Bi%5D%5BVOL_ES_AG%5D=VOL_ES_AG&SE%5Bi%5D%5BVOL_ES_NTRATA%5D=VOL_ES_NTRATA&SE%5Bi%5D%5BINT_VH%5D=INT_VH&SE%5Bi%5D%5BOBITO_VH%5D=OBITO_VH&SE%5Bi%5D%5BRENDA_G1%5D=RENDA_G1&SE%5Bi%5D%5BRENDA_G2%5D=RENDA_G2&media=). Para que os dados pudessem ser lidos no R, foi necessária a instalação do pacote `readxl`.
 
-Após a importação dos dados, utilizamos a função \`View()\` para visualizar de forma interativa a tabela importada e verificar a estrutura dos dados.
+Após a importação dos dados, utilizamos a função `View()` para visualizar de forma interativa a tabela importada e verificar a estrutura dos dados.
 
 ```{r}
 
@@ -307,7 +307,7 @@ O qqplot das colunas selecionadas sugere uma certa linearidade pela proximidade
 
 ### Exportando a base de dados
 
-Após executar a rotina, é recomendado que o usuário salve as alterações feitas na base de dados para acesso futuro. Para exportar os dados, o procedimento envolve utilizar a biblioteca \`openxlsx\`.
+Após executar a rotina, é recomendado que o usuário salve as alterações feitas na base de dados para acesso futuro. Para exportar os dados, o procedimento envolve utilizar a biblioteca `openxlsx`.
 
 É possível exportar o dataframe para um arquivo Excel (.xlsx) usando a função `write.xlsx(dataframe, file = "nome_do_arquivo.xlsx")`.
 

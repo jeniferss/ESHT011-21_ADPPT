@@ -357,7 +357,7 @@ display: none;
 
 <div id="roteiro-02---análise-exploratória-i" class="section level2">
 <h2>Roteiro 02 - Análise Exploratória I</h2>
-<p>Na Análise Exploratória de Dados (EDA), são utilizados métodos para
+<p>Na Análise Exploratória de Dados, são utilizados métodos para
 resumir, visualizar e interpretar as principais características dos
 dados antes de realizar modelagens ou análises complexas.</p>
 <p>Considerando o tema escolhido pelo grupo para a disciplina, que
@@ -377,9 +377,9 @@ linguagem R.</p>
 <p>Primeiramente, foi feito o download de uma planilha em formato Excel
 a partir do <a href="https://www.painelsaneamento.org.br/explore/ano?SE%5Ba%5D=2018&amp;SE%5Bi%5D%5BPOP_SEM_AG%25%5D=POP_SEM_AG%25&amp;SE%5Bi%5D%5BPOP_SEM_ES%25%5D=POP_SEM_ES%25&amp;SE%5Bi%5D%5BVOL_ES_AG%5D=VOL_ES_AG&amp;SE%5Bi%5D%5BVOL_ES_NTRATA%5D=VOL_ES_NTRATA&amp;SE%5Bi%5D%5BINT_VH%5D=INT_VH&amp;SE%5Bi%5D%5BOBITO_VH%5D=OBITO_VH&amp;SE%5Bi%5D%5BRENDA_G1%5D=RENDA_G1&amp;SE%5Bi%5D%5BRENDA_G2%5D=RENDA_G2&amp;media=">Painel
 Saneamento Brasil</a>. Para que os dados pudessem ser lidos no R, foi
-necessária a instalação do pacote `readxl`.</p>
-<p>Após a importação dos dados, utilizamos a função `View()` para
-visualizar de forma interativa a tabela importada e verificar a
+necessária a instalação do pacote <code>readxl</code>.</p>
+<p>Após a importação dos dados, utilizamos a função <code>View()</code>
+para visualizar de forma interativa a tabela importada e verificar a
 estrutura dos dados.</p>
 <pre class="r"><code># Importação de biblioteca para leitura de arquivos .xlsx
 if (!requireNamespace(&quot;readxl&quot;, quietly = TRUE)) {
@@ -1042,7 +1042,8 @@ desviando da curva em valores muito altos e muito baixos
 <h3>Exportando a base de dados</h3>
 <p>Após executar a rotina, é recomendado que o usuário salve as
 alterações feitas na base de dados para acesso futuro. Para exportar os
-dados, o procedimento envolve utilizar a biblioteca `openxlsx`.</p>
+dados, o procedimento envolve utilizar a biblioteca
+<code>openxlsx</code>.</p>
 <p>É possível exportar o dataframe para um arquivo Excel (.xlsx) usando
 a função
 <code>write.xlsx(dataframe, file = &quot;nome_do_arquivo.xlsx&quot;)</code>.</p>
