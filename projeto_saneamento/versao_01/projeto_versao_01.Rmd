@@ -1,0 +1,507 @@
+---
+title: "Atividade Correlação"
+author: "Jenifer Soares Souza"
+output: pdf_document
+---
+
+### Introdução
+
+Os dados utilizados nesta análise foram extraídos da plataforma [Atlas Brasil](http://www.atlasbrasil.org.br), que fornece informações sobre indicadores socioeconômicos, como renda, saneamento, rede elétrica, IDH e população, importante para compreensão das condições de vida e desenvolvimento dos municípios brasileiras.
+
+Os dados sobre o código da UF e a região de cada município foram extraídos da [IBGE Malhas Municipais](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html).
+
+### Instalando Bibliotecas
+
+```{r}
+
+rm(list = ls())
+
+packages = c(
+  "tinytex",
+  "rmarkdown",
+  "tidyverse",
+  "readxl",
+  "openxlsx",
+  "corrplot",
+  "Hmisc"
+)
+
+for (package in packages){
+  if (!(package %in% installed.packages())) {
+    install.packages(package)
+  }
+}
+
+library(tinytex)
+library(rmarkdown)
+library(tidyverse)
+library(readxl)
+library(openxlsx)
+library(corrplot)
+library(Hmisc)
+```
+
+### Importando Dados
+
+```{r}
+
+dados2010 <- read_excel("../dados/dados_atlasbrasil.xlsx")
+head(dados2010)
+```
+
+```{r}
+
+municipios2022 <- read_excel("../dados/BR_Municipios_2022.xlsx")
+head(municipios2022)
+```
+
+```{r}
+
+UFs2022 <- read_excel("../dados/BR_UF_2022.xlsx")
+tail(UFs2022)
+```
+
+### **Tratamento de Dados**
+
+Na coluna **Territorialidades**, os nomes dos municípios seguem o padrão "Município (UF)". Para realizar uma análise posterior das regiões brasileiras, serão aplicados os seguintes passos:
+
+-   Criar duas novas colunas: uma para o nome do município e outra para a UF;
+
+-   Concatenar os dados obtidos com informações do código e a região à qual o município pertence.
+
+```{r}
+
+dados2010 <- dados2010 %>%
+  mutate(
+    "Nome do Município" = str_extract(Territorialidades, "^[^(]+"),
+    "Unidade da Federação" = str_extract(Territorialidades, "(?<=\\().*(?=\\))")
+  )
+
+head(dados2010)
+```
+
+Outro ponto a ser considerado é a manipulação e legibilidade dos dados. Os cabeçalhos do dataframe contêm caracteres especiais, espaços e são longos. Para melhorar isso, serão aplicados os seguintes processos:
+
+-   Encurtar os nomes das colunas e remover caracteres especiais e espaços;
+
+-   Remover colunas com duplicidade de informações;
+
+-   Elaborar uma tabela que explique o significado dos novos nomes de coluna, referenciando o que cada coluna representa.
+
+```{r}
+
+# Remover a colunas Territorialidades, que foi dividada em duas outras
+dados2010 <- subset(dados2010, select = -Territorialidades)
+
+cabecalhos2010 <- list(
+  list(
+    nome = "Nome do Município",
+    sigla = "MUN"
+  ),
+  list(
+    nome = "Unidade da Federação",
+    sigla = "UF"
+  ),
+  list(
+    nome = "% da população em domicílios com água encanada 2010",
+    sigla = "PAE"
+  ),
+  list(
+    nome = "% de pessoas em domicílios urbanos com coleta de lixo 2010",
+    sigla = "PCL"
+  ),
+  list(
+    nome = "% de pessoas em domicílios com energia elétrica 2010",
+    sigla = "PEL"
+  ),
+  list(
+    nome = "População total 2010",
+    sigla = "PT"
+  ),
+  list(
+    nome = "População rural 2010",
+    sigla = "PR"
+  ),
+  list(
+    nome = "População urbana 2010",
+    sigla = "PU"
+  ), 
+  list(
+    nome = "IDHM 2010",
+    sigla = "IDHM"
+  ),
+  list(
+    nome = "Renda per capita 2010",
+    sigla = "REN"
+  )
+)
+
+# Ordenar nomes dos cabeçalhos de acordo com a lista definida
+cabecalhos2010_ordenados <- sapply(cabecalhos2010, `[[`, "nome")
+dados2010 <- dados2010[, cabecalhos2010_ordenados]
+
+# Substituir nomes dos cabeçalhos
+siglas <- setNames(
+  sapply(cabecalhos2010, `[[`, "sigla"), 
+  sapply(cabecalhos2010, `[[`, "nome")
+)
+
+colnames(dados2010) <- siglas[colnames(dados2010)]
+
+# Remover a primeira linha, que se trata de dados do Brasil
+dados2010 <- dados2010[-1, ]
+
+head(dados2010)
+```
+
+```{r}
+
+municipios <- municipios2022 %>% 
+  left_join(UFs2022, by = "UF")
+
+head(municipios)
+```
+
+```{r}
+
+dados2010 <- dados2010 %>%
+  mutate(
+    MUN = trimws(iconv(toupper(MUN), from = "UTF-8", to = "ASCII//TRANSLIT")),
+    UF = trimws(toupper(UF))
+  )
+
+municipios <- municipios %>%
+  mutate(
+    MUN = trimws(iconv(toupper(MUN), from = "UTF-8", to = "ASCII//TRANSLIT")),
+    UF = trimws(toupper(UF))
+  )
+
+dados2010_V2 <- left_join(
+  dados2010, 
+  municipios, 
+  by = c("MUN", "UF")
+) %>% 
+  mutate(REG = gsub("\n", "", REG))
+
+head(dados2010_V2)
+```
+
+Como um dos objetivos deste trabalho é analisar as relações entre taxas de urbanização e parâmetros de infraestrutura, vamos criar uma nova coluna chamada Taxa de Urbanização (TXU), que será calculada como a razão entre a população urbana e a população total.
+
+```{r}
+
+dados2010_V2 <- dados2010_V2 %>%
+  mutate(
+    TXU = PU / PT
+  )
+
+head(dados2010_V2)
+```
+
+### Análise Exploratória
+
+#### Metadados
+
+Na sessão anterior, criamos um DataFrame, uma estrutura de dados que organiza informações em linhas e colunas, similar a uma planilha no Excel ou, de forma mais simples, a uma tabela. Cada coluna em um DataFrame possui um cabeçalho que indica qual informação ela representa, fornecendo uma visão dos dados. Para o nosso novo conjunto de dados, após tratamento dos dados, temos:
+
+```{r}
+
+cabecalhos <- c(
+  list(
+    list(
+      nome = "Códido do Município", 
+      sigla = "CM"
+    ),
+    list(
+      nome = "Nome da Unidade da Federação", 
+      sigla = "NUF"
+    ),
+    list(
+      nome = "Região", 
+      sigla = "REG"
+    )
+  ),
+  cabecalhos2010
+)
+
+
+nomes <- sapply(cabecalhos, function(x) x$nome)
+siglas <- sapply(cabecalhos, function(x) x$sigla)
+
+cabecalhos <- data.frame(
+  Descrição = nomes,
+  Sigla = siglas,
+  stringsAsFactors = FALSE
+)
+
+# View(cabecalhos)
+head(cabecalhos)
+```
+
+#### Valores Máximos e Mínimos
+
+Aqui está um DataFrame que apresenta nossos valores máximos e mínimos para cada variável numérica e a quais municípios eles pertencem.
+
+```{r}
+
+numericas <- sapply(dados2010_V2, is.numeric)
+
+valores_maxmin <- function(dataframe, colunas) {
+  
+  nomes_colunas <- names(colunas)
+  
+  linhas <- lapply(
+    nomes_colunas, 
+    function(name) {
+      coluna <- sym(name)
+      valor_maximo <- max(dataframe[[name]], na.rm = TRUE)
+      valor_minimo <- min(dataframe[[name]], na.rm = TRUE)
+      
+      maximo <- dataframe %>% filter(!!coluna == valor_maximo)
+      minimo <- dataframe %>% filter(!!coluna == valor_minimo)
+      
+      list(
+        Max = list(
+          value = valor_maximo, 
+          municipios = paste(maximo$MUN, "(", maximo$UF, ")")
+        ),
+        Min = list(
+          value = valor_minimo, 
+          municipios = paste(minimo$MUN, "(", minimo$UF, ")")
+        )
+      )
+    }
+  )
+  
+  names(linhas) <- nomes_colunas
+  return(linhas)
+}
+
+dados_maxmin <- valores_maxmin(
+  dados2010_V2, 
+  dados2010_V2[numericas]
+)
+
+head(dados_maxmin, 1)
+# View(dados_maxmin)
+```
+
+#### Agrupamento
+
+Para nossa análise, vamos agrupar os dados de municípios por regiões para ter uma maior visão da distribuição dos parâmetros de infraestutura pelo Brasil.
+
+```{r}
+
+corr_regioes <- dados2010_V2 %>%
+  drop_na(IDHM) %>%
+  drop_na(TXU) %>%
+  drop_na(REG) %>% 
+  group_by(REG) %>%
+  dplyr::summarize(
+    n_obs = n(),
+    
+    media_IDHM = mean(IDHM),
+    desvio_padrao_IDHM = sd(IDHM),
+    
+    media_TXU = mean(TXU),
+    desvio_padrao_TXU = sd(TXU),
+  ) %>% 
+  mutate(
+    erro_IDHM = 1.96 * desvio_padrao_IDHM / sqrt(n_obs),
+    limite_superior_IDHM = media_IDHM + erro_IDHM,
+    limite_inferior_IDHM = media_IDHM - erro_IDHM,
+    
+    erro_TXU = 1.96 * desvio_padrao_TXU / sqrt(n_obs),
+    limite_superior_TXU = media_TXU + erro_TXU,
+    limite_inferior_TXU = media_TXU - erro_TXU
+  )
+
+corr_regioes
+```
+
+#### Histograma e Box-Plot
+
+Um box-plot é uma representação gráfica que resume a distribuição de um conjunto de dados com base em: o valor mínimo, o primeiro quartil (Q1), a mediana, o terceiro quartil (Q3) e o valor máximo.
+
+Um histograma é um gráfico que representa a distribuição de intervalos de valores e a frequência de cada observação. O eixo X mostra os intervalos de valores, enquanto o eixo Y mostra a frequência ou a densidade dos dados em cada intervalo.
+
+```{r}
+
+ggplot(
+  data = dados2010_V2, 
+  aes(x = IDHM, fill = REG)
+) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~REG) +
+  ggtitle("Histograma de IDHM por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+
+ggplot(
+  data = dados2010_V2, 
+  aes(y = IDHM, fill = REG)
+) +
+  geom_boxplot() +
+  facet_wrap(~REG) +
+  ggtitle("Box-plot de IDHM por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+
+```
+
+Um ponto é que as regiões Centro-Oeste, Nordeste e Sul apresentam uma maior quantidade de outliers no IDHM, que são valores extremos, o que sugere a existência de disparidades no IDHM dentro dos municípios dessas regiões.
+
+```{r}
+
+ggplot(
+  data = dados2010_V2, 
+  aes(x = TXU, fill = REG)
+) +
+  geom_histogram(bins = 30) +
+  facet_wrap(~REG) +
+  ggtitle("Histograma de Taxa de Urbanização por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+
+ggplot(
+  data = dados2010_V2, 
+  aes(y = TXU, fill = REG)
+) +
+  geom_boxplot() +
+  facet_wrap(~REG) +
+  ggtitle("Box-plot de TXU por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+```
+
+Podemos observar que a distribuição das taxas de urbanização nas regiões Sudeste, Sul e Centro-Oeste é mais assimétrica em comparação com as demais regiões. Isso indica que essas áreas apresentam uma maior variação nas taxas de urbanização, podendo refletir desigualdades regionais no processo de urbanização.
+
+#### Média e Intevalo de Confiança
+
+A média é uma medida de tendência central que representa o valor médio de um conjunto de dados. Ela é calculada somando todos os valores e dividindo pelo número total de observações.
+
+O intervalo de confiança é uma faixa de valores, que estimativa a precisão da estatística amostral, por exmeplo, um intervalo de confiança de $95\%$ para a média indica que há uma probabilidade de $95\%$ (que foi utilizado nessa análise) de que o valor da média da população esteja contido nesse intervalo.
+
+```{r}
+
+ggplot(
+  data = corr_regioes, 
+  aes(x = REG, y = media_IDHM, fill=REG)
+) +
+  geom_col() +
+  geom_errorbar(aes(ymin = limite_inferior_IDHM, ymax = limite_superior_IDHM)) +
+  ggtitle("Média e intervalo de confiança de IDHM por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+
+ggplot(
+  data = corr_regioes, 
+  aes(x = REG, y = media_TXU, fill=REG)
+) +
+  geom_col() +
+  geom_errorbar(aes(ymin = limite_inferior_TXU, ymax = limite_superior_TXU)) +
+  ggtitle("Média e intervalo de confiança de Taxa de Urbanização por região") +
+  xlab("") +
+  ylab("") +
+  theme_bw() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+```
+
+Como observações, podemos dizer que as regiões com maior número de taxas de urbanização são o Sudeste e o Centro-Oeste. Essas regiões também apresentam os maiores Índices de Desenvolvimento Humano Municipal (IDHM), embora menores ao da Região Sul.
+
+#### Diagrama de Dispersão
+
+Um diagrama de dispersão, também conhecido como gráfico de dispersão ou scatter plot, é uma ferramenta gráfica usada para visualizar a relação entre duas variáveis contínuas. Ele mostra a forma como essas variáveis estão relacionadas, permitindo identificar padrões, tendências e possíveis outliers.
+
+```{r}
+
+ggplot(dados2010_V2, aes(x = TXU, y = IDHM)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "purple", formula = y ~ x) +
+  ggtitle("Diagrama de Dispersão") +       
+  xlab("TXU") +                      
+  ylab("IDHM") +                        
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 12)
+  )
+```
+
+No caso acima, as variáveis apresentam uma correlação positiva, o que significa que, se uma variável aumenta, a outra também tende a aumentar.
+
+#### Matriz de Correlação
+
+A correlação de Pearson é uma medida que define a força e a direção da relação entre duas variáveis, em que:
+
+-   $r = 0$: não há relação linear entre as variáveis;
+
+-   $0 < r < 1$: se uma variável aumenta, a outra tende a aumentar;
+
+-   $-1 < r < 0$: se que uma variável aumenta, a outra tende a diminuir;
+
+-   **Valores próximos de 0** indicam uma correlação fraca ou inexistente;
+
+-   **Valores próximos de 1** indicam uma correlação forte.
+
+Uma matriz de correlação permite visualizar a relação entre variáveis simultaneamente. Cada elemento da matriz representa a correlação entre dois pares de variáveis, indicando a força e a direção da relação linear entre elas.
+
+Para gerar uma visualização de uma matriz de correlação, podemos usar o pacote `ggplot2` em R. A primiera abordagem utilizada é o método de cores, onde diferentes intensidades de cor representam diferentes níveis de correlação.
+
+```{r}
+
+dados2010_V2 %>%
+  select(names(dados2010_V2[numericas])) %>%
+  cor(method = "pearson", use = "complete.obs") %>%
+  corrplot(
+    method = "color", 
+    tl.col = "black", 
+    tl.cex = 0.8, 
+    number.cex = 0.7
+  )
+```
+
+A segunda abordagem utilizada é o método de números, onde a visualização da matriz de é feita por meio da exibição dos valores numéricos das correlações entre as variáveis.
+
+```{r}
+
+dados2010_V2 %>%
+  select(names(dados2010_V2[numericas])) %>%
+  cor(method = "pearson", use = "complete.obs") %>%
+  corrplot(
+    method = "number", 
+    tl.col = "gray", 
+    tl.cex = 0.9, 
+    number.cex = 0.7
+  )
+```
+
+Podemos observar que, entre as variáveis de parâmetros de infraestrutura dos municípios, o acesso à água encanada apresentou a maior força de correlação com o IDHM, a renda per capita e a taxa de urbanização.
+
+Além disso, a correlação entre renda per capita e IDHM é muito forte. Por outro lado, a correlação entre renda per capita e taxa de urbanização ou IDHM com taxa de urbanização é moderada, mas ainda significativas.
