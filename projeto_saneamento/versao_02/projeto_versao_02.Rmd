@@ -1,0 +1,353 @@
+---
+title: "Prática no R! Roteiro 5 - Regressão Linear"
+author: "Jenifer Soares Souza"
+output: pdf_document
+---
+
+### Introdução
+
+Os dados utilizados nesta análise foram extraídos da plataforma [Atlas Brasil](http://www.atlasbrasil.org.br), que fornece informações sobre indicadores socioeconômicos, como renda, saneamento, rede elétrica, IDH e população, importante para compreensão das condições de vida e desenvolvimento dos municípios brasileiras.
+
+Os dados sobre o código da UF e a região de cada município foram extraídos da [IBGE Malhas Municipais](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais/15774-malhas.html).
+
+### Instalando Bibliotecas
+
+O software estatístico R já conta com funções básicas que permitem executar uma análise de regressão linear. Mas além das funções básicas, vamos usar os pacotes:
+
+-   `tidyverse`: para adicionar o operador `%>%` e a função `select();`
+-   `performance`: para comparar modelos;
+-   `broom`: para salvar as estatísticas resultantes do modelo.
+
+```{r}
+
+rm(list = ls())
+
+packages = c(
+  "tinytex",
+  "rmarkdown",
+  "tidyverse",
+  "readxl",
+  "openxlsx",
+  "performance",
+  "broom",
+  "ggplot2"
+)
+
+for (package in packages){
+  if (!(package %in% installed.packages())) {
+    install.packages(package)
+  }
+}
+
+library(tinytex)
+library(rmarkdown)
+library(tidyverse)
+library(readxl)
+library(openxlsx)
+library(tidyverse)
+library(performance)
+library(broom)
+library(ggplot2)
+
+```
+
+### Importando Dados
+
+```{r}
+
+dados2010 = read_excel("../dados/dados2010_v2.xlsx")
+head(dados2010)
+```
+
+### Análise Exploratória
+
+#### Metadados
+
+Na sessão anterior, criamos um DataFrame, uma estrutura de dados que organiza informações em linhas e colunas, similar a uma planilha no Excel ou, de forma mais simples, a uma tabela. Cada coluna em um DataFrame possui um cabeçalho que indica qual informação ela representa, fornecendo uma visão dos dados. Para o nosso conjunto de dados, temos:
+
+```{r}
+
+cabecalhos = list(
+  list(
+    nome = "Nome do Município",
+    sigla = "MUN"
+  ),
+  list(
+    nome = "Unidade da Federação",
+    sigla = "UF"
+  ),
+  list(
+    nome = "Códido do Município", 
+    sigla = "CM"
+  ),
+  list(
+    nome = "Nome da Unidade da Federação", 
+    sigla = "NUF"
+  ),
+  list(
+    nome = "Região", 
+    sigla = "REG"
+  ),
+  list(
+    nome = "% da população em domicílios com água encanada 2010",
+    sigla = "PAE"
+  ),
+  list(
+    nome = "% de pessoas em domicílios urbanos com coleta de lixo 2010",
+    sigla = "PCL"
+  ),
+  list(
+    nome = "% de pessoas em domicílios com energia elétrica 2010",
+    sigla = "PEL"
+  ),
+  list(
+    nome = "População total 2010",
+    sigla = "PT"
+  ),
+  list(
+    nome = "População rural 2010",
+    sigla = "PR"
+  ),
+  list(
+    nome = "População urbana 2010",
+    sigla = "PU"
+  ), 
+  list(
+    nome = "IDHM 2010",
+    sigla = "IDHM"
+  ),
+  list(
+    nome = "Renda per capita 2010",
+    sigla = "REN"
+  ),
+  list(
+    nome = "Taxa de urbanização",
+    sigla = "TXU"
+  )
+)
+
+nomes = sapply(cabecalhos, function(x) x$nome)
+siglas = sapply(cabecalhos, function(x) x$sigla)
+
+cabecalhos = data.frame(
+  Descrição = nomes,
+  Sigla = siglas,
+  stringsAsFactors = FALSE
+)
+
+View(cabecalhos)
+
+```
+
+### Regressão Linear Simples
+
+Com o código e descrição das variáveis já é possível executar uma **regressão linear simples**.
+
+A regressão linear é uma ferramenta estatística que permite **explorar e inferir a relação de uma variável dependente com variáveis independentes**, a partir da fórmula:
+
+$Y = \beta_0 + \beta_1 X_1$
+
+Onde:
+
+-   Y = variável dependente (resposta/saída)
+-   X = variável independente (indicadora/explicativa/preditora)
+-   $\beta_0$ = coeficiente do intercepto
+-   $\beta_1$ = coeficiente da inclinação
+
+Para executar uma regressão linear simples no R usaremos a função `lm()`, salvando os resultados no objeto `modelo`. São necessários os argumentos: `formula` que indica as variaveis seguindo a estrutura "Y \~ X", `data` que indica a base de dados e adicionalmente foi especificado o argumento `na.action = na.exclude` para excluir os valores faltantes (NA). Podemos visualizar o ajuste global e coeficientes do modelo executando a função `summary()`.
+
+```{r}
+
+modeloSimplesPAE <- lm(
+  formula = PAE ~ TXU, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+modeloSimplesPCL <- lm(
+  formula = PCL ~ TXU, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+modeloSimplesPEL <- lm(
+  formula = PEL ~ TXU, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+modeloSimplesIDHM <- lm(
+  formula = IDHM ~ TXU, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+modeloSimplesREN <- lm(
+  formula = REN ~ TXU, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+# PAE
+summary(modeloSimplesPAE)
+
+ggplot(dados2010, aes(x = TXU, y = PAE)) +
+  geom_point(color = "#2c7fb8") +  
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +
+  ggtitle("Relação entre PAE e TXU") +  
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) 
+
+# PCL
+summary(modeloSimplesPCL)
+
+ggplot(dados2010, aes(x = TXU, y = PCL)) +
+  geom_point(color = "#7fcdbb") +  
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +
+  ggtitle("Relação entre PCL e TXU") +  
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) 
+
+# PEL
+summary(modeloSimplesPEL)
+
+ggplot(dados2010, aes(x = TXU, y = PEL)) +
+  geom_point(color = "#2c7fb8") +  
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +
+  ggtitle("Relação entre PEL e TXU") +  
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) 
+
+# IDHM
+summary(modeloSimplesIDHM)
+
+ggplot(dados2010, aes(x = TXU, y = IDHM)) +
+  geom_point(color = "#7fcdbb") +  
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +
+  ggtitle("Relação entre IDHM e TXU") +  
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold")) 
+
+# REN
+summary(modeloSimplesREN)
+
+ggplot(dados2010, aes(x = TXU, y = REN)) +
+  geom_point(color = "#2c7fb8") +  
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +
+  ggtitle("Relação entre REN e TXU") +  
+  theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
+
+```
+
+Primeiro sobre o ajuste. O **R² (coeficiente de determinação)** de todos os modelos gerados é inferior à `0,3317`, que podemos interpretar como a medida que a variável preditora X explica a variação em Y. O **R² ajustado** de todos os modelos gerados é inferior à `0,3316`, sendo uma medida alternativa ao R² que penaliza a inclusão de variáveis independentes (X) pouco explicativas. Com esses valores, pode-se sugerir que o modelo não está explicando a maior parte da variação na variável dependente, indicando que o o modelo é muito simples ou que há variáveis importantes que não foram incluídas.
+
+O **Teste F** é uma medida do quanto o modelo melhorou na previsão de valores comparado com o nível de não precisão do modelo. Os modelos apresentam um valor alta de **estatística F** e, ainda que o **p-valor** em todos os casos é menor que o nível de significância (`0,05`), ou seja, existe uma alta probabilidade de que os resultados do modelo não representem um erro amostral.
+
+Sobre os **coeficientes beta**, $\beta_0$ (coeficiente do intercepto) e $\beta_1$ (coeficiente da inclinação), a tabela de coeficientes também apresenta o erro padrão, estatística t e p-valor, que indicam que os resultados são significativos até para um nível de significância de `0,001`.
+
+Por exemplo, podemos inferir que, em média, um aumento de 1% na taxa de urbanização está associada a um aumento de aproximadamente 37% na taxa de pessoas com acesso à água encanada.
+
+#### Análise dos resíduos
+
+O modelo de regressão linear assume algumas **hipóteses** sobre os dados de entrada para que seu resultado seja significativo.
+
+1.  O modelo é linear nos parâmetros.
+2.  A amostragem é aleatória.
+3.  Variação amostral da variável independente.
+4.  Média condicional do erro igual a zero.
+5.  O erro tem a mesma variância para qualquer valor da variável explicativa.
+
+Se o modelo for adequado, **os resíduos devem refletir as propriedades impostas pelo termo de erro do modelo**. Portanto, a **análise dos resíduos** se faz necessária para avaliar a adequação do modelo.
+
+O modelo salvo permite a visualização de seis gráficos que auxiliam na análise dos resíduos e hipóteses.
+
+Cada um desses gráficos pode ser acessado com a função `plot()`, com o modelo criado como o primeiro argumento e um segundo argumento `which =` com o número do gráfico a ser acessado. Sendo cada um deles:
+
+1.  O primeiro gráfico exibe a relação entre os resíduos e os valores ajustados. Ele permite verificar a não-linearidade do modelo. Um bom modelo possui os valores distribuidos em torno da linha de resíduos igual a zero (linha pontilhada). O modelo aplicado (linha vermelha) desvia um pouco do zero, principalmente nos extremos dos valores ajustados;
+2.  O segundo gráfico (QQ-plot) exibe os resíduos normalizados e os quantis teóricos da curva normal, ou seja, verifica a hipótese de normalidade dos resíduos. O ideal é que as observações sigam a linha pontilhada;
+3.  O terceiro gráfico é útil para verificar a hipótese de homocedasticidade dos resíduos. No modelo ideal, os pontos estão distribuídos uniformemente ao redor da linha vermelha;
+4.  O quarto gráfico é útil para detectar observações extremas, que possuem alta influência no modelo. As observações mais influentes possuem um valor de distância de Cook maior;
+5.  O quinto gráfico exibe a influência pelos resíduos padronizados. Neste gráfico, as observações mais distantes possuem maior influência;
+6.  O sexto gráfico também apresenta uma análise da distância de Cook, permitindo identificar pontos influentes, mas em termos da alavancagem.
+
+```{r}
+
+for (i in 1:6) {
+  plot(modeloSimplesPAE, which = i)
+}
+
+```
+
+#### Regressão linear múltipla
+
+Como o objetivo inicial do trabalho era entender como a taxa de urbanização poderia explicar cada um dos parâmetros de infraestrutura, optou-se por não utilizar um modelo múltiplo, mas sim diversos modelos simples. Para fins de exemplificação, utilizaremos três parâmetros de infraestrutura na explicação do IDHM (que, em teoria, já os consideraria). Para isso, foram eliminadas as variáveis de taxa de urbanização e renda, pois possuem correlação significativa com as demais variáveis, a fim de evitar problemas de colinearidade.
+
+```{r}
+
+modeloMultiplo <- lm(
+  formula = IDHM ~ PCL + PEL + PAE, 
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+summary(modeloMultiplo)
+
+```
+
+Como resultado, obtivemos um modelo que explica aproximadamente 55% da variabilidade dos dados, com todos os coeficientes estatisticamente significativos.
+
+### Comparando modelos
+
+Uma forma de comparar modelos é usando o pacote `performance`. Para comparar os dois modelos (regressão linear simples e regressão linear múltipla), vamos usar a função `compare_performance()` e salvar a comparação como o objeto `tabela_modelos`.
+
+```{r, warning = FALSE}
+
+tabela_modelos = compare_performance(
+  modeloSimplesPAE, 
+  modeloSimplesPCL,
+  modeloSimplesPEL,
+  modeloSimplesIDHM,
+  modeloSimplesREN,
+  rank = TRUE
+)
+
+tabela_modelos
+
+```
+
+Da tabela apresentada, pode-se dizer que:
+
+-   O modeloSimplesIDHM apresenta o melhor desempenho entre os modelos listados, sugerindo que o modelo é mais eficaz para explicar a variabilidade no IDHM.
+
+-   O modeloSimplesREN tem o pior desempenho, indicando que o modelo não é eficaz para explicar a variabilidade na renda.
+
+-   Modelos com como PEL, PCL, e REN indicam que há uma quantidade significativa de variabilidade que não é explicada pelo modelo simples e pode exigir modelos que incluam outras variáveis explicativas.
+
+### Regressão linear múltipla com o método stepwise
+
+A regressão stepwise consiste em adicionar e remover iterativamente preditores (X) no intuito de encontro o subconjunto de variáveis que resulta no melhor desempenho, que é o modelo que melhor reduz o erro de predição (AIC).
+
+Ela pode ser feita de três formas diferentes:
+
+-   Forward selection: começa sem preditores no modelo e adiciona iterativamente os preditores com maior poder preditivo, até não existir melhoria estatisticamente significativa.
+-   Backward selection: começa com todos os preditores no modelo e remove iterativamente os preditores com menor poder preditivo, resultando em um modelo onde todos os preditores são estatisticamente significativos.
+-   Stepwise selection: é uma combinação da forward selection e backward selection, sendo o método mais eficaz.
+
+Para mostrar como funciona esse método, vamos aplicar a regressão do tipo stepwise selection em um conjunto de variáveis da base de dados. As variáveis escolhidas foram: PCL, PEL, PAE. Para aplicar o método, primeiro é necessário criar o modelo com todas as variáveis e depois aplicar a função `step()` para obter o modelo com os melhores resultados.
+
+```{r}
+
+modeloStepWise = lm(
+  formula = IDHM ~ PCL + PEL + PAE,
+  data = dados2010, 
+  na.action = na.exclude
+)
+
+summary(modeloStepWise)
+```
+
+```{r}
+
+modeloStepWiseBoth = step(modeloStepWise, direction = "both")
+summary(modeloStepWiseBoth)
+```
+
+Neste caso, a aplicação do método stepwise não gerou alterações no modelo inicial.
+
+Mas é necessário cautela ao aplicar o método stepwise, pois ele permite não pensar no problema o qual buscamos a solução. Além disso, ele pode apresentar: (1) viés na estimativa dos parâmetros, (2) o problema inerente (mas frequentemente esquecido) do teste de múltiplas hipóteses e (3) foco inadequado na busca de um único modelo.
